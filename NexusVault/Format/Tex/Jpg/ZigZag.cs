@@ -1,10 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿/*******************************************************************************
+ * Copyright (C) 2018-2022 MarbleBag
+ *
+ * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * You should have received a copy of the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>
+ *
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ *******************************************************************************/
 
-namespace NexusVault.tex
+namespace NexusVault.Format.Tex.Jpg
 {
-    public static class ZigZag
+    internal static class ZigZag
     {
         /**
          * Be i row index and j column index of a mXn matrix and 0&lt=i&ltm and 0&lt=j&ltn. The returned array <b>R</b> is one dimensional of length m*n and

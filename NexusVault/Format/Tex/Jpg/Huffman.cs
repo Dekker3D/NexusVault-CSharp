@@ -1,14 +1,25 @@
-﻿using System;
+﻿/*******************************************************************************
+ * Copyright (C) 2018-2022 MarbleBag
+ *
+ * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * You should have received a copy of the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>
+ *
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ *******************************************************************************/
+
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 
-namespace NexusVault.tex
+namespace NexusVault.Format.Tex.Jpg
 {
-    public class HuffmanTable
+    public sealed class HuffmanTable
     {
-        private class HuffmanKey : IComparable<HuffmanTable.HuffmanKey>
+        private sealed class HuffmanKey : IComparable<HuffmanTable.HuffmanKey>
         {
-
             public int Bits { get; }
             public int Length { get; }
 
@@ -60,7 +71,7 @@ namespace NexusVault.tex
             }
         }
 
-        public class HuffmanValue
+        public sealed class HuffmanValue
         {
             /** number of used bits in the encodedWord, starting with the lsb */
             public int EncodedWordBitLength { get; }
@@ -79,36 +90,35 @@ namespace NexusVault.tex
 
         private readonly IDictionary<HuffmanKey, HuffmanValue> decodeMapping = new SortedDictionary<HuffmanKey, HuffmanValue>();
         private readonly IDictionary<HuffmanKey, HuffmanValue> encodeMapping = new SortedDictionary<HuffmanKey, HuffmanValue>();
-        private readonly byte[][] codeTable;
+        private readonly byte[][] codes = new byte[16][];
 
         public HuffmanTable(byte[] numberOfValues, byte[] values)
         {
             // sort values in categories
-            codeTable = new byte[16][];
             int pos = 0;
             for (int i = 0; i < numberOfValues.Length; ++i)
             {
-                codeTable[i] = new byte[numberOfValues[i]];
+                codes[i] = new byte[numberOfValues[i]];
                 for (int j = 0; j < numberOfValues[i]; ++j)
-                    codeTable[i][j] = values[pos++];
+                    codes[i][j] = values[pos++];
             }
 
-            buildHuffmanTree();
+            BuildHuffmanTree();
         }
 
-        private void buildHuffmanTree()
+        private void BuildHuffmanTree()
         {
             //Decoding
             int encodedWord = 0;
-            for (int idx = 0; idx < codeTable.Length; ++idx)
+            for (int idx = 0; idx < codes.Length; ++idx)
             {
                 int encodedLength = idx + 1;
-                if (codeTable[idx].Length > 1 << idx + 1)
-                    throw new ArgumentException($"Code error. Step {idx + 1} contains {codeTable[idx].Length} words. With a bit length of {encodedLength} only {1 << encodedLength} words are supported.");
+                if (codes[idx].Length > 1 << idx + 1)
+                    throw new ArgumentException($"Code error. Step {idx + 1} contains {codes[idx].Length} words. With a bit length of {encodedLength} only {1 << encodedLength} words are supported.");
 
-                for (int nIdx = 0; nIdx < codeTable[idx].Length; ++nIdx)
+                for (int nIdx = 0; nIdx < codes[idx].Length; ++nIdx)
                 {
-                    int decodedWord = codeTable[idx][nIdx];
+                    int decodedWord = codes[idx][nIdx];
                     var key = new HuffmanKey(encodedWord, encodedLength);
                     decodeMapping.Add(key, new HuffmanValue(encodedWord, encodedLength, decodedWord));
                     encodedWord += 1;
@@ -131,37 +141,38 @@ namespace NexusVault.tex
             return decodeMapping.TryGetValue(new HuffmanKey(decodedWord, 32), out value);
         }
 
-
-        /**
-         * @param nBits
-         *            length of the word. Given in the number of used bits
-         * @return true when there is at least one decoding available
-         */
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="bits">length of the word. Given in the number of used bits</param>
+        /// <returns>true when there is at least one decoding available</returns>
         public bool HasDecodingForWordOfLength(int bits)
         {
-            if (bits < 0 || codeTable.Length < bits)
+            if (bits < 0 || codes.Length < bits)
                 return false;
-            return codeTable[bits - 1].Length != 0;
+            return codes[bits - 1].Length != 0;
         }
 
-        /**
-         * @return minimal number of bits needed for decoding
-         */
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns> minimal number of bits needed for decoding</returns>
         public int GetDecodeMinLength()
         {
-            for (int i = 0; i < codeTable.Length; ++i)
-                if (codeTable[i].Length != 0)
+            for (int i = 0; i < codes.Length; ++i)
+                if (codes[i].Length != 0)
                     return i + 1;
             return 0;
         }
 
-        /**
-         * @return maximal number of bits which can be used for decoding
-         */
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns>maximal number of bits which can be used for decoding</returns>
         public int GetDecodeMaxLength()
         {
-            for (int i = codeTable.Length - 1; 0 <= i; --i)
-                if (codeTable[i].Length != 0)
+            for (int i = codes.Length - 1; 0 <= i; --i)
+                if (codes[i].Length != 0)
                     return i + 1;
             return 0;
         }
@@ -188,17 +199,175 @@ namespace NexusVault.tex
         }
     }
 
-    public class HuffmanDecoder
+    internal sealed class BitQueue
     {
-        public static void Decode(HuffmanTable dc, HuffmanTable ac, BitSupply supplier, int[] block, int offset, int blockLength)
+        private ulong _bitQueue;
+
+        public int Position { get; private set; }
+        public int RemainingCapacity { get { return Huffman.BitsPerLong - Position; } }
+
+        public int Pop(int requestedBits)
+        {
+            if (requestedBits < 0 || Huffman.BitsPerInt < requestedBits)
+                throw new ArgumentException($"Can't pop less than 0 or more than {Huffman.BitsPerInt} bits.", nameof(requestedBits));
+            if (Position < requestedBits)
+                throw new ArgumentException($"Queue contains {Position} bits. Unable to pop {requestedBits} bits.");
+
+            if (requestedBits == 0)
+                return 0;
+
+            int result = (int)(_bitQueue >> (Huffman.BitsPerLong - requestedBits));
+            _bitQueue <<= requestedBits;
+            Position -= requestedBits;
+            return result;
+        }
+
+        public void Push(uint data, int lengthInBits)
+        {
+            Push((int)data, lengthInBits);
+        }
+
+        public void Push(int data, int lengthInBits)
+        {
+            if (lengthInBits < 0 || Huffman.BitsPerInt < lengthInBits)
+                throw new ArgumentException($"Can't push less than 0 or more than {Huffman.BitsPerInt} bits.", nameof(lengthInBits));
+            if (RemainingCapacity < lengthInBits)
+                throw new IndexOutOfRangeException($"Queue can only store {RemainingCapacity} more bits. Unable to push {lengthInBits} bits.");
+
+            if (lengthInBits == 0)
+                return;
+
+            uint mask = 0xFFFFFFFF >> (Huffman.BitsPerInt - lengthInBits);
+            ulong alignedData = (ulong)(data & mask) << (RemainingCapacity - lengthInBits);
+            _bitQueue |= alignedData;
+            Position += lengthInBits;
+        }
+
+        public void Clear()
+        {
+            Position = 0;
+            _bitQueue = 0;
+        }
+
+        override public string ToString()
+        {
+            var bin = Convert.ToString((long)_bitQueue, 2);
+            while (bin.Length < 64)
+                bin = "0" + bin;
+            return $"[BitQueue: {bin.Substring(0, Position) + "|" + bin.Substring(Position)}]";
+        }
+    }
+
+    internal sealed class BitSupply
+    {
+        private readonly BitQueue _queue = new BitQueue();
+        private readonly byte[] _data;
+        private int _index;
+
+        public int RemainingBits
+        {
+            get => _queue.Position + (_data.Length - _index) * Huffman.BitsPerByte;
+        }
+
+        public BitSupply(byte[] data)
+        {
+            this._data = data;
+        }
+
+        public bool CanSupply(int requestedBits)
+        {
+            return requestedBits <= RemainingBits;
+        }
+
+        public int Supply(int requestedBits)
+        {
+            if (requestedBits > Huffman.BitsPerInt)
+                throw new ArgumentException(nameof(requestedBits));
+
+            if (_queue.Position < requestedBits)
+            {
+                var dif = requestedBits - _queue.Position;
+                if (dif > _queue.RemainingCapacity)
+                    throw new IndexOutOfRangeException();
+
+                while (dif > 0)
+                {
+                    _queue.Push(_data[_index++] & 0xFF, Huffman.BitsPerByte);
+                    dif -= Huffman.BitsPerByte;
+                }
+            }
+            return _queue.Pop(requestedBits);
+        }
+
+        override public string ToString()
+        {
+            return $"[BitSupply: Remaining bits={RemainingBits} Queue: {_queue}]";
+        }
+    }
+
+    internal sealed class BitConsumer
+    {
+        private readonly BitQueue _queue = new BitQueue();
+        private readonly MemoryStream _output;
+
+        public BitConsumer() : this(new MemoryStream()) { }
+
+        public BitConsumer(MemoryStream output)
+        {
+            _output = output ?? throw new ArgumentNullException(nameof(output));
+        }
+
+        public void Consume(int data, int numberOfBits)
+        {
+            _queue.Push(data, numberOfBits);
+        }
+
+        public long Size { get => _output.Position; }
+
+        public void Flush()
+        {
+            FlushBytes();
+            var pendingBits = _queue.Position;
+            if(pendingBits > 0)
+            {
+                var data = _queue.Pop(pendingBits) << (((Huffman.BitsPerByte - pendingBits) | 0xFF) >> Huffman.BitsPerByte);
+                _output.WriteByte((byte)data);
+            }
+        }
+
+        private void FlushBytes()
+        {
+            while(_queue.Position > Huffman.BitsPerByte)            
+                _output.WriteByte((byte)_queue.Pop(Huffman.BitsPerByte));            
+        }
+
+        public byte[] ToByteArray()
+        {
+            return _output.ToArray();
+        }
+    }
+
+    internal static class Huffman
+    {
+        internal const int BitsPerByte = 8;
+        internal const int BitsPerInt = sizeof(int) * BitsPerByte;
+        internal const int BitsPerLong = sizeof(long) * BitsPerByte;
+
+        private static void AssertNotOutOfBounds(string argumentName, int value, int lowerBound, int upperBound)
+        {
+            if (value < lowerBound || upperBound < value)
+                throw new ArgumentException($"{value} is not within [{lowerBound}; {upperBound}]", argumentName);
+        }
+
+        public static void Decode(HuffmanTable dc, HuffmanTable ac, BitSupply supplier, int[] dst, int dstOffset, int dstLength)
         {
             _ = dc ?? throw new ArgumentNullException(nameof(dc));
             _ = ac ?? throw new ArgumentNullException(nameof(ac));
-            _ = block ?? throw new ArgumentNullException(nameof(block));
+            _ = dst ?? throw new ArgumentNullException(nameof(dst));
 
-            AssertNotOutOfBounds(nameof(offset), offset, 0, block.Length);
-            AssertNotOutOfBounds(nameof(blockLength), blockLength, 1, block.Length);
-            AssertNotOutOfBounds($"{nameof(offset)}+{nameof(blockLength)}", offset + blockLength, 0, block.Length);
+            AssertNotOutOfBounds(nameof(dstOffset), dstOffset, 0, dst.Length);
+            AssertNotOutOfBounds(nameof(dstLength), dstLength, 1, dst.Length);
+            AssertNotOutOfBounds($"{nameof(dstOffset)}+{nameof(dstLength)}", dstOffset + dstLength, 0, dst.Length);
 
             int dcBits = Decode(dc, supplier);
             if (!supplier.CanSupply(dcBits))
@@ -208,43 +377,37 @@ namespace NexusVault.tex
             else
             {
                 int dcDiff = supplier.Supply(dcBits);
-                block[offset] = ConvertToSigned(dcDiff, dcBits);
+                dst[dstOffset] = ConvertToSigned(dcDiff, dcBits);
             }
 
-            for (int i = 1; i < blockLength;)
+            for (int i = 1; i < dstLength;)
             {
                 int acBits = Decode(ac, supplier);
 
                 if (acBits == 0)
                 { // End of block, zero out remaining elements
-                    for (int j = i; j < blockLength; ++j)
-                        block[j + offset] = 0;
+                    for (int j = i; j < dstLength; ++j)
+                        dst[j + dstOffset] = 0;
                     break;
                 }
 
                 if (acBits == 0xF0)
                 { // Zero out 16 elements
-                    if (blockLength < i + 16)
-                    {
-                        throw new IndexOutOfRangeException(
-                                string.Format("Overflow : AC code 0xF0 detected. Unable to zero %d elements at position %d of %d", 16, i, blockLength));
-                    }
+                    if (dstLength < i + 16)                    
+                        throw new IndexOutOfRangeException($"Overflow : AC code 0xF0 detected. Unable to zero {16} elements at position {i} of {dstLength}.");
 
                     for (int l = i + 16; i < l; ++i)
-                        block[i + offset] = 0;
+                        dst[i + dstOffset] = 0;
 
                     continue;
                 }
 
                 int msbAC = acBits >> 4 & 0xF;
-                if (blockLength < i + msbAC)
-                {
-                    throw new IndexOutOfRangeException(
-                            string.Format("Overflow : AC high bits set. Unable to zero %d elements at position %d of %d", msbAC, i, blockLength));
-                }
-
+                if (dstLength < i + msbAC)                
+                    throw new IndexOutOfRangeException($"Overflow : AC high bits set. Unable to zero {msbAC} elements at position {i} of {dstLength}");
+                
                 for (int l = i + msbAC; i < l; ++i)
-                    block[i + offset] = 0;
+                    dst[i + dstOffset] = 0;
 
 
                 int lsbAC = acBits & 0xF;
@@ -253,22 +416,14 @@ namespace NexusVault.tex
                     return;
 
                 int acValue = supplier.Supply(lsbAC);
-                block[i++ + offset] = ConvertToSigned(acValue, lsbAC);
+                dst[i++ + dstOffset] = ConvertToSigned(acValue, lsbAC);
             }
 
             return;
         }
 
-        private static int ConvertToSigned(int data, int bits)
-        {
-            if (data < 1 << bits - 1)
-                return data + (-1 << bits) + 1;
-            return data;
-        }
-
         private static int Decode(HuffmanTable table, BitSupply supplier)
         {
-
             int maxLength = table.GetDecodeMaxLength();
             int minLength = table.GetDecodeMinLength();
 
@@ -306,119 +461,122 @@ namespace NexusVault.tex
             return 0;
         }
 
-        private static void AssertNotOutOfBounds(String argumentName, int value, int lowerBound, int upperBound)
+        public static void Encode(HuffmanTable dc, HuffmanTable ac, BitConsumer consumer, int[] src, int srcOffset, int srcLength)
         {
-            if (value < lowerBound || upperBound < value)
-                throw new ArgumentException($"{value} is not within [{lowerBound}; {upperBound}]", argumentName);
-        }
-    }
+            _ = dc ?? throw new ArgumentNullException(nameof(dc));
+            _ = ac ?? throw new ArgumentNullException(nameof(ac));
+            _ = src ?? throw new ArgumentNullException(nameof(src));
 
-    class BitQueue
-    {
-        private ulong bitQueue;
-        public int Position { get; private set; }
-        public int RemainingCapacity { get { return 64 - Position; } }
+            AssertNotOutOfBounds(nameof(srcOffset), srcOffset, 0, src.Length);
+            AssertNotOutOfBounds(nameof(srcLength), srcLength, 1, src.Length);
+            AssertNotOutOfBounds($"{nameof(srcOffset)}+{nameof(srcLength)}", srcOffset + srcLength, 0, src.Length);
 
+            int dcValue = src[srcOffset];
+            int dcBits = CalculateBitLength(dcValue);
+            Encode(dc, consumer, dcBits);
 
-        public int Pop(int requestedBits)
-        {
-            if (requestedBits < 0 || 32 < requestedBits)
-                throw new IndexOutOfRangeException("Can't pop less than 0 or more than 32 bits.");
-            if (Position < requestedBits)
-                throw new IndexOutOfRangeException($"Queue contains {Position} bits. Unable to pop {requestedBits} bits.");
+            int dcDiff = ConvertToUnsigned(dcValue, dcBits);
+            consumer.Consume(dcDiff, dcBits);
 
-            if (requestedBits == 0)
-                return 0;
-
-            int result = (int)(bitQueue >> (64 - requestedBits));
-            bitQueue <<= requestedBits;
-            Position -= requestedBits;
-            return result;
-        }
-
-        public void Push(uint data, int lengthInBits)
-        {
-            Push((int)data, lengthInBits);
-        }
-
-        public void Push(int data, int lengthInBits)
-        {
-            if (lengthInBits < 0 || 32 < lengthInBits)
-                throw new IndexOutOfRangeException("Can't push less than 0 or more than 32 bits.");
-            if (RemainingCapacity < lengthInBits)
-                throw new IndexOutOfRangeException($"Queue can only store {RemainingCapacity} more bits. Unable to push {lengthInBits} bits.");
-
-            if (lengthInBits == 0)
-                return;
-
-            uint mask = 0xFFFFFFFF >> (32 - lengthInBits);
-            ulong alignedData = (ulong)(data & mask) << (RemainingCapacity - lengthInBits);
-            bitQueue |= alignedData;
-            Position += lengthInBits;
-        }
-
-        public void Clear()
-        {
-            Position = 0;
-            bitQueue = 0;
-        }
-
-        override public string ToString()
-        {
-            string bin = Convert.ToString((long)bitQueue, 2);
-            while (bin.Length < 64)
-                bin = "0" + bin;
-            return $"[BitQueue: {bin.Substring(0, Position) + "|" + bin.Substring(Position)}]";
-        }
-    }
-
-    public class BitSupply
-    {
-        private readonly BitQueue queue = new BitQueue();
-        private readonly byte[] data;
-        private int index;
-
-        public int RemainingBits
-        {
-            get
+            for (int i = 1; i < srcLength;)
             {
-                return queue.Position + (data.Length - index) * 8 /*bits per byte*/ ;
-            }
-        }
+                int acBits = 0x00;
 
-        public BitSupply(byte[] data)
-        {
-            this.data = data;
-        }
+                if (src[i + srcOffset] == 0)
+                { // count zeros
+                    int zeroCounter = 1;
 
-        public bool CanSupply(int requestedBits)
-        {
-            return requestedBits <= RemainingBits;
-        }
+                    for (int j = i + 1; j < srcLength; ++j)
+                    {
+                        if (src[j + srcOffset] == 0)                        
+                            zeroCounter += 1;                        
+                        else                        
+                            break;                        
+                    }
 
-        public int Supply(int requestedBits)
-        {
-            if (requestedBits > 32)
-                throw new IndexOutOfRangeException();
+                    i += zeroCounter;
 
-            if (queue.Position < requestedBits)
-            {
-                var dif = requestedBits - queue.Position;
-                if (dif > queue.RemainingCapacity)
-                    throw new IndexOutOfRangeException();
+                    if (i == srcLength)
+                    { // end of block
+                        Encode(ac, consumer, 0x00);
+                        break;
+                    }
 
-                while (dif > 0)
-                {
-                    queue.Push(data[index++] & 0xFF, 8);
-                    dif -= 8;
+                    while (zeroCounter >= 16)
+                    {
+                        Encode(ac, consumer, 0xF0); // special code for 16 zeros
+                        zeroCounter -= 16;
+                    }
+
+                    // msb contains the number of zeros before the next ac value
+                    acBits |= zeroCounter << 4 & 0xF0;
                 }
+
+                int acValue = src[i++ + srcOffset];
+                int acValueBits = CalculateBitLength(acValue);
+
+                if (acValueBits > 0xF)
+                {
+                    throw new IndexOutOfRangeException($"Overflow : AC bit length {acValueBits} is greater than {16} bits, which is not supported by this encoder.");
+                }
+
+                // lsb contains the number of bits to read for the actual ac value
+                acBits |= acValueBits & 0x0F;
+
+                Encode(ac, consumer, acBits);
+
+                int acValueConverted = ConvertToUnsigned(acValue, acValueBits);
+                consumer.Consume(acValueConverted, acValueBits);
             }
-            return queue.Pop(requestedBits);
         }
 
-        override public string ToString()
+        private static void Encode(HuffmanTable table, BitConsumer consumer, int value)
         {
-            return $"[BitSupply: Remaining bits={RemainingBits} Queue: {queue}]";
+            if (table.TryEncode(value, out var huffValue))            
+                throw new ArgumentException($"Encoding not found : Table contains no encoding for word {Convert.ToString(value, 2)}");            
+            consumer.Consume(huffValue.EncodedWord, huffValue.EncodedWordBitLength);
+        }
+
+        private static int ConvertToSigned(int value, int numberOfBits)
+        {
+            if (value < (1 << (numberOfBits - 1)))
+                return value + (-1 << numberOfBits) + 1;
+            return value;
+        }
+
+        private static int ConvertToUnsigned(int value, int numberOfBits)
+        {
+            if (value < 0)
+                return value - ((-1 << numberOfBits) + 1);
+            return value;
+        }
+
+        private static int CalculateBitLength(int value)
+        {
+            if (value == 0)
+                return 0;
+            return BitsPerInt - CountLeadingZeros(Math.Abs(value));
+        }
+
+        /// <summary>
+        /// Source: https://stackoverflow.com/questions/10439242/count-leading-zeroes-in-an-int32
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        private static int CountLeadingZeros(int value)
+        {
+            value |= value >> 1;
+            value |= value >> 2;
+            value |= value >> 4;
+            value |= value >> 8;
+            value |= value >> 16;
+            //count the ones
+            value -= value >> 1 & 0x55555555;
+            value = (value >> 2 & 0x33333333) + (value & 0x33333333);
+            value = (value >> 4) + value & 0x0f0f0f0f;
+            value += value >> 8;
+            value += value >> 16;
+            return BitsPerInt - (value & 0x0000003f); //subtract # of 1s from 32
         }
     }
 }

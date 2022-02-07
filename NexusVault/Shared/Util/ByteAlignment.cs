@@ -55,24 +55,6 @@ namespace NexusVault.Shared.Util
             return AlignTo8Byte(position) - position;
         }
 
-        public static void AlignTo16Byte(BinaryReader reader)
-        {
-            reader.BaseStream.Position = AdvanceByToAlign16Byte(reader.BaseStream.Position);
-        }
 
-        public static void AlignTo8Byte(BinaryReader reader)
-        {
-            reader.BaseStream.Position = AdvanceByToAlign8Byte(reader.BaseStream.Position);
-        }
-
-        public static void AlignTo16Byte(BinaryWriter writer)
-        {
-            writer.BaseStream.Position = AdvanceByToAlign16Byte(writer.BaseStream.Position);
-        }
-
-        public static void AlignTo8Byte(BinaryWriter writer)
-        {
-            writer.BaseStream.Position = AdvanceByToAlign8Byte(writer.BaseStream.Position);
-        }
     }
 }

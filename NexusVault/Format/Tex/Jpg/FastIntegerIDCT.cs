@@ -30,9 +30,9 @@
 /* compliance sE, 2.1.94 */
 /**********************************************************/
 
-namespace NexusVault.tex
+namespace NexusVault.Format.Tex.Jpg
 {
-    static class FastIntegerIDCT
+    internal static class FastIntegerIDCT
     {
         private const int W1 = 2841; /* 2048*sqrt(2)*cos(1*pi/16) */
         private const int W2 = 2676; /* 2048*sqrt(2)*cos(2*pi/16) */
@@ -57,13 +57,13 @@ namespace NexusVault.tex
          * @param dataOffset
          *            matrix start
          */
-        public static void InverseDiscreteCosineTransform(int[] data, int dataOffset)
+        public static void InverseDiscreteCosineTransform(int[] data, int offset, int rowStride)
         {
             for (int i = 0; i < 8; ++i)            
-                Row(data, dataOffset + 8 * i);            
+                Row(data, offset + rowStride * i);            
 
             for (int i = 0; i < 8; ++i)            
-                Column(data, dataOffset + i);            
+                Column(data, offset + i, rowStride);            
         }
 
         private static void Row(int[] data, int i)
@@ -125,26 +125,26 @@ namespace NexusVault.tex
 
         }
 
-        private static void Column(int[] data, int i)
+        private static void Column(int[] data, int i, int rowStride)
         {
             int x0, x1, x2, x3, x4, x5, x6, x7, x8;
-            x1 = data[i + 8 * 4] << 8;
-            x2 = data[i + 8 * 6];
-            x3 = data[i + 8 * 2];
-            x4 = data[i + 8 * 1];
-            x5 = data[i + 8 * 7];
-            x6 = data[i + 8 * 5];
-            x7 = data[i + 8 * 3];
+            x1 = data[i + rowStride * 4] << 8;
+            x2 = data[i + rowStride * 6];
+            x3 = data[i + rowStride * 2];
+            x4 = data[i + rowStride * 1];
+            x5 = data[i + rowStride * 7];
+            x6 = data[i + rowStride * 5];
+            x7 = data[i + rowStride * 3];
             bool useShortCut = (x1 | x2 | x3 | x4 | x5 | x6 | x7) == 0;
 
             if (useShortCut)
             {
-                data[i + 8 * 0] = data[i + 8 * 1] = data[i + 8 * 2] = data[i
-                        + 8 * 3] = data[i + 8 * 4] = data[i + 8 * 5] = data[i + 8 * 6] = data[i + 8 * 7] = iclp[iclp_offset + (data[i + 8 * 0] + 32 >> 6)];
+                data[i + rowStride * 0] = data[i + rowStride * 1] = data[i + rowStride * 2] = data[i
+                        + rowStride * 3] = data[i + rowStride * 4] = data[i + rowStride * 5] = data[i + rowStride * 6] = data[i + rowStride * 7] = iclp[iclp_offset + (data[i + rowStride * 0] + 32 >> 6)];
                 return;
             }
 
-            x0 = (data[i + 8 * 0] << 8) + 8192;
+            x0 = (data[i + rowStride * 0] << 8) + 8192;
 
             /* first stage */
             x8 = W7 * (x4 + x5) + 4;
@@ -174,14 +174,14 @@ namespace NexusVault.tex
             x4 = 181 * (x4 - x5) + 128 >> 8;
 
             /* fourth stage */
-            data[i + 8 * 0] = iclp[iclp_offset + (x7 + x1 >> 14)];
-            data[i + 8 * 1] = iclp[iclp_offset + (x3 + x2 >> 14)];
-            data[i + 8 * 2] = iclp[iclp_offset + (x0 + x4 >> 14)];
-            data[i + 8 * 3] = iclp[iclp_offset + (x8 + x6 >> 14)];
-            data[i + 8 * 4] = iclp[iclp_offset + (x8 - x6 >> 14)];
-            data[i + 8 * 5] = iclp[iclp_offset + (x0 - x4 >> 14)];
-            data[i + 8 * 6] = iclp[iclp_offset + (x3 - x2 >> 14)];
-            data[i + 8 * 7] = iclp[iclp_offset + (x7 - x1 >> 14)];
+            data[i + rowStride * 0] = iclp[iclp_offset + (x7 + x1 >> 14)];
+            data[i + rowStride * 1] = iclp[iclp_offset + (x3 + x2 >> 14)];
+            data[i + rowStride * 2] = iclp[iclp_offset + (x0 + x4 >> 14)];
+            data[i + rowStride * 3] = iclp[iclp_offset + (x8 + x6 >> 14)];
+            data[i + rowStride * 4] = iclp[iclp_offset + (x8 - x6 >> 14)];
+            data[i + rowStride * 5] = iclp[iclp_offset + (x0 - x4 >> 14)];
+            data[i + rowStride * 6] = iclp[iclp_offset + (x3 - x2 >> 14)];
+            data[i + rowStride * 7] = iclp[iclp_offset + (x7 - x1 >> 14)];
         }
     }
 }

@@ -1,81 +1,116 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿/*******************************************************************************
+ * Copyright (C) 2018-2022 MarbleBag
+ *
+ * This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * You should have received a copy of the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>
+ *
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ *******************************************************************************/
 
-namespace NexusVault.tex
+using System;
+
+namespace NexusVault.Format.Tex.Jpg
 {
-    static class Sampler
+    internal static class Sampler
     {
-
-        /**
-	    *
-	    * @param src
-	    *            image array, can contain multiple images
-	    * @param srcOffset
-	    *            offset at which the image starts
-	    * @param srcImageHeight
-	    *            height of the image
-	    * @param srcImageWidth
-	    *            width of the image
-	    * @param srcImageRowInterleave
-	    *            in case of interleaved images the number of indices to skip to reach the next row of the image
-	    * @param sampleScale
-	    *            only supports quadratic upsampling. 2 means 2x2, 3 means 3x3, etc
-	    * @param dst
-	    *            target array, needs to be big enough to hold the upsampled image.
-	    * @param dstOffset
-	    *            offet at whicht the image should start
-	    * @param dstImageRowInterleave
-	    *            in case of interleaved images the number of indices to skip to reach the next row of the image
-	    */
-        public static void Upsample(int[] src, int srcOffset, int srcImageWidth, int srcImageHeight, int srcImageRowInterleave, int sampleScale, //
-                int[] dst, int dstOffset, int dstImageRowInterleave)
+        public static void Upsample(int[] src, int srcOffset, int srcImageWidth, int srcImageHeight, int srcImageRowStride, int sampleScale, //
+            int[] dst, int dstOffset, int dstImageRowStride)
         {
 
+            if (srcImageRowStride < srcImageWidth)
+                throw new ArgumentException();
+
             // final int srcLength = srcImageHeight * srcImageWidth;
-            int dstWidth = srcImageWidth * sampleScale;
-            int dstHeight = srcImageWidth * sampleScale;
+            var dstImageWidth = srcImageWidth * sampleScale;
+            var dstImageHeight = srcImageHeight * sampleScale;
+
+            if (dstImageRowStride < dstImageWidth)
+                throw new ArgumentException();
+
+
             // final int dstLength = dstWidth * dstHeight;
-            int srcEndIdx = srcOffset + srcImageWidth + (srcImageHeight - 1) * (srcImageRowInterleave + srcImageWidth);
-            int dstEndIdx = dstOffset + dstWidth + (dstHeight - 1) * (dstImageRowInterleave + dstWidth);
+            var srcEndIdx = srcOffset + (srcImageHeight - 1) * srcImageRowStride + srcImageWidth;
+            var dstEndIdx = dstOffset + (dstImageHeight - 1) * dstImageRowStride + dstImageWidth;
 
             if (src.Length < srcEndIdx)
-            {
-                throw new IndexOutOfRangeException(string.Format("src too small. Expected %d but was %d", srcEndIdx, src.Length));
-            }
+                throw new ArgumentException(string.Format("src too small. Expected %d but was %d", srcEndIdx, src.Length));
+
             if (dst.Length < dstEndIdx)
+                throw new ArgumentException(string.Format("dst too small. Expected %d but was %d", dstEndIdx, dst.Length));
+
+            var srcStartIdx = srcEndIdx;
+            var dstStartIdx = dstEndIdx;
+
+            for (var y = 0; y < srcImageHeight; ++y)
             {
-                throw new IndexOutOfRangeException(string.Format("dst too small. Expected %d but was %d", dstEndIdx, dst.Length));
-            }
+                var srcIdx = srcStartIdx;
+                var dstIdx = dstStartIdx;
 
-            int srcWPos = srcImageWidth;
-            int srcStartIdx = srcEndIdx - 1;
-            int dstStartIdx = dstEndIdx - 1;
-            int srcIdx = srcStartIdx;
-            int dstIdx = dstStartIdx;
-            for (; srcIdx >= srcOffset; --srcIdx)
-            {
-                int sampleValue = src[srcIdx];
-
-                for (int i = 0; i < sampleScale; ++i)
-                { // fill first row with values
-                    dst[dstIdx--] = sampleValue;
-                }
-                for (int i = 1; i < sampleScale; ++i)
-                { // copy row to the rows above
-                    Array.Copy(dst, dstIdx + 1, dst, dstIdx + 1 - i * (dstWidth + dstImageRowInterleave), sampleScale);
+                for (var x = 0; x < srcImageWidth; ++x)
+                {
+                    var sampleValue = src[--srcIdx];
+                    for (var i = 0; i < sampleScale; ++i) // fill first row with values
+                        dst[--dstIdx] = sampleValue;
                 }
 
-                if (--srcWPos == 0)
-                { // move to next row
-                    srcWPos = srcImageWidth;
-                    srcStartIdx -= (srcImageWidth + srcImageRowInterleave);
-                    srcIdx = srcStartIdx + 1;
-                    dstStartIdx -= sampleScale * (dstWidth + dstImageRowInterleave);
-                    dstIdx = dstStartIdx;
-                }
+                for (var i = 1; i < sampleScale; ++i)
+                    Array.Copy(dst, dstIdx, dst, dstIdx - i * dstImageRowStride, dstImageWidth);
+
+                srcStartIdx -= srcImageRowStride;
+                dstStartIdx -= sampleScale * dstImageRowStride;
             }
         }
 
+        public static void Downsample(int[] src, int srcOffset, int srcImageWidth, int srcImageHeight, int srcImageRowStride, int sampleScale, //
+                int[] dst, int dstOffset, int dstImageRowStride)
+        {
+
+            if (srcImageRowStride < srcImageWidth)
+                throw new ArgumentException();
+
+            // final int srcLength = srcImageHeight * srcImageWidth;
+            var dstImageWidth = srcImageWidth / sampleScale;
+            var dstImageHeight = srcImageHeight / sampleScale;
+
+            if (dstImageRowStride < dstImageWidth)
+                throw new ArgumentException();
+
+            // final int dstLength = dstWidth * dstHeight;
+            var srcEndIdx = srcOffset + (srcImageHeight - 1) * srcImageRowStride + srcImageWidth;
+            var dstEndIdx = dstOffset + (dstImageHeight - 1) * dstImageRowStride + dstImageWidth;
+
+            if (src.Length < srcEndIdx)
+                throw new ArgumentException(string.Format("src too small. Expected %d but was %d", srcEndIdx, src.Length));
+
+            if (dst.Length < dstEndIdx)
+                throw new ArgumentException(string.Format("dst too small. Expected %d but was %d", dstEndIdx, dst.Length));
+
+
+            double downsampleFactor = 1.0d / (sampleScale * sampleScale);
+            var srcStartIdx = srcOffset;
+            var dstStartIdx = dstOffset;
+
+            for (var y = 0; y < dstImageHeight; ++y)
+            {
+                var srcIdx = srcStartIdx;
+                var dstIdx = dstStartIdx;
+
+                for (var x = 0; x < dstImageWidth; ++x)
+                {
+                    long sum = 0;
+                    for (var i = 0; i < sampleScale; ++i)
+                        for (var j = 0; j < sampleScale; ++j)
+                            sum += src[srcIdx + j + i * srcImageRowStride];
+
+                    srcIdx += sampleScale;
+                    dst[dstIdx++] = (int)(sum * downsampleFactor);
+                }
+
+                dstStartIdx += dstImageRowStride;
+                srcStartIdx += sampleScale * srcImageRowStride;
+            }
+        }
     }
 }
