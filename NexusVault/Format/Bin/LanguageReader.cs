@@ -12,8 +12,8 @@
 using System.Collections.Generic;
 using System.IO;
 using NexusVault.Shared.Exception;
-using NexusVault.Shared.Util;
 using NexusVault.Format.Bin.Struct;
+using NexusVault.Shared.Extension;
 
 namespace NexusVault.Format.Bin
 {
@@ -42,11 +42,11 @@ namespace NexusVault.Format.Bin
             var postHeaderPosition = reader.BaseStream.Position;
 
             reader.BaseStream.Position = postHeaderPosition + (long)header.tagNameOffset;
-            var tagName = reader.ReadChars((int)header.tagNameLength - 1).ToString();
+            var tagName = reader.ReadUTF16((int)header.tagNameLength - 1);
             reader.BaseStream.Position = postHeaderPosition + (long)header.shortNameOffset;
-            var shortName = reader.ReadChars((int)header.shortNameLength - 1).ToString();
+            var shortName = reader.ReadUTF16((int)header.shortNameLength - 1);
             reader.BaseStream.Position = postHeaderPosition + (long)header.longNameOffset;
-            var longName = reader.ReadChars((int)header.longNameLength - 1).ToString();
+            var longName = reader.ReadUTF16((int)header.longNameLength - 1);
 
             var locale = new Locale
             (
@@ -65,7 +65,7 @@ namespace NexusVault.Format.Bin
             var dictionary = new Dictionary<uint, string>(entries.Length);
             foreach (var entry in entries){
                 reader.BaseStream.Position = postHeaderPosition + header.textOffset + entry.characterOffset * 2;
-                dictionary.Add(entry.id, Text.ReadNullTerminatedUTF16(reader));
+                dictionary.Add(entry.id, reader.ReadNullTerminatedUTF16()) ;
             }
 
             return new LanguageDictionary(locale, dictionary);

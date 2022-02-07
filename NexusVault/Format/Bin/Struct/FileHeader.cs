@@ -9,21 +9,19 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  *******************************************************************************/
 
-using System;
 using System.IO;
 using System.Runtime.InteropServices;
 
 namespace NexusVault.Format.Bin.Struct
 {
-
     [StructLayout(LayoutKind.Sequential, Pack = 4)]
-    public class FileHeader
+    public sealed class FileHeader
     {
         public const int Signature = 'L' << 24 | 'T' << 16 | 'E' << 8 | 'X';
         public const int SizeOf = 0x60;
 
-        public Int32 signature; // "LTEX"
-        public Int32 version;
+        public int signature; // "LTEX"
+        public int version;
 
         /// <summary>
         /// Values are hardcoded
@@ -32,17 +30,17 @@ namespace NexusVault.Format.Bin.Struct
         /// - 3 french
         /// - 4 korean
         /// </summary>
-        public Int64 languageType;
-        public Int64 tagNameLength;
-        public Int64 tagNameOffset;
-        public Int64 shortNameLength;
-        public Int64 shortNameOffset;
-        public Int64 longNameLength;
-        public Int64 longNameOffset;
-        public Int64 entryCount;
-        public Int64 entryOffset;
-        public Int64 textLength;
-        public Int64 textOffset;
+        public long languageType;
+        public long tagNameLength;
+        public long tagNameOffset;
+        public long shortNameLength;
+        public long shortNameOffset;
+        public long longNameLength;
+        public long longNameOffset;
+        public long entryCount;
+        public long entryOffset;
+        public long textLength;
+        public long textOffset;
 
         public FileHeader() { }
 
@@ -83,34 +81,6 @@ namespace NexusVault.Format.Bin.Struct
             writer.Write(entryOffset);
             writer.Write(textLength);
             writer.Write(textOffset);
-        }
-    }
-
-    [StructLayout(LayoutKind.Sequential, Size = 8, Pack = 4)]
-    public class Entry
-    {
-        public const int SizeOf = 0x8;
-
-        public UInt32 id;
-        public UInt32 characterOffset;
-
-        public Entry() { }
-
-        public Entry(BinaryReader reader)
-        {
-            Read(reader);
-        }
-
-        public void Read(BinaryReader reader)
-        {
-            id = reader.ReadUInt32();
-            characterOffset = reader.ReadUInt32();
-        }
-
-        public void Write(BinaryWriter writer)
-        {
-            writer.Write(id);
-            writer.Write(characterOffset);
         }
     }
 

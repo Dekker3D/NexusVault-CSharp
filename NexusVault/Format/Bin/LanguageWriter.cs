@@ -13,6 +13,7 @@ using NexusVault.Shared.Util;
 using System.Collections.Generic;
 using System.IO;
 using NexusVault.Format.Bin.Struct;
+using NexusVault.Shared.Extension;
 
 namespace NexusVault.Format.Bin
 {
@@ -22,10 +23,7 @@ namespace NexusVault.Format.Bin
         {
             var stream = new MemoryStream();
             Write(dictionary, new BinaryWriter(stream));
-            var result = new byte[stream.Position];
-            stream.Position = 0;
-            stream.Read(result, 0, result.Length);
-            return result;
+            return stream.ToArray();
         }
 
         public static void Write(LanguageDictionary dictionary, BinaryWriter writer)
@@ -40,27 +38,24 @@ namespace NexusVault.Format.Bin
                 languageType = dictionary.Locale.Type
             };
 
-            header.tagNameLength = dictionary.Locale.TagName.Length + 1;
-            header.tagNameOffset =  writer.BaseStream.Position - postHeaderPosition;
-            Text.WriteNullTerminatedUTF16(writer, dictionary.Locale.TagName);
-            ByteAlignment.AlignTo16Byte(writer);
+            header.tagNameLength = writer.WriteNullTerminatedUTF16(dictionary.Locale.TagName);
+            header.tagNameOffset =  writer.BaseStream.Position - postHeaderPosition;            
+            writer.AlignTo16Byte();
 
-            header.shortNameLength = dictionary.Locale.ShortName.Length + 1;
-            header.shortNameOffset = writer.BaseStream.Position - postHeaderPosition;
-            Text.WriteNullTerminatedUTF16(writer, dictionary.Locale.ShortName);
-            ByteAlignment.AlignTo16Byte(writer);
+            header.shortNameLength = writer.WriteNullTerminatedUTF16(dictionary.Locale.ShortName);
+            header.shortNameOffset = writer.BaseStream.Position - postHeaderPosition;            
+            writer.AlignTo16Byte();
 
-            header.longNameLength = dictionary.Locale.LongName.Length + 1;
-            header.longNameOffset = writer.BaseStream.Position - postHeaderPosition;
-            Text.WriteNullTerminatedUTF16(writer, dictionary.Locale.LongName);
-            ByteAlignment.AlignTo16Byte(writer);
+            header.longNameLength = writer.WriteNullTerminatedUTF16(dictionary.Locale.LongName);
+            header.longNameOffset = writer.BaseStream.Position - postHeaderPosition;            
+            writer.AlignTo16Byte();
 
             header.entryOffset = writer.BaseStream.Position - postHeaderPosition;
             header.entryCount = dictionary.Entries.Count;
             header.textOffset = ByteAlignment.AlignTo16Byte(header.entryOffset + header.entryCount * Entry.SizeOf);
 
-            var cache = new Dictionary<string, uint>();
-            uint characterOffset = 0;
+            var cache = new Dictionary<string, int>();
+            int characterOffset = 0;
             foreach(var entry in dictionary.Entries)
             {
                 writer.Write(entry.Key);
@@ -75,7 +70,7 @@ namespace NexusVault.Format.Bin
 
                     var position = writer.BaseStream.Position;
                     writer.BaseStream.Position = postHeaderPosition + header.textOffset + characterOffset * 2;
-                    characterOffset += (uint) Text.WriteNullTerminatedUTF16(writer, entry.Value);
+                    characterOffset +=  writer.WriteNullTerminatedUTF16(entry.Value);
                     writer.BaseStream.Position = position;
                 }
             }
