@@ -16,7 +16,10 @@ using System;
 
 namespace NexusVault.Format.Tex.Dxt
 {
-    public static class DXTImageReader {
+    public static class DXTImage {
+
+        #region read
+
         public static Image Decompress(FileHeader header, byte[] dxtImages, int offset, int mipMap) {
             if (header.signature != FileHeader.Signature) {
                 throw new SignatureMismatchException("tex", FileHeader.Signature, header.signature);
@@ -56,8 +59,44 @@ namespace NexusVault.Format.Tex.Dxt
             return rgba;
         }
 
-        private static SquishFlags GetCompressionType(TextureType type) {
-            switch (type) {
+        #endregion
+
+        #region write
+
+        public static byte[] CompressSingleImage(TextureType dxtType, Image image)
+        {
+            byte[] rgba;
+            switch (image.Format)
+            {
+                case ImageFormat.ARGB:
+                    rgba = ColorModelConverter.ConvertARGBToRGBA(image.Data);
+                    break;
+                case ImageFormat.RGB:
+                    rgba = ColorModelConverter.ConvertRGBToRGBA(image.Data);
+                    break;
+                case ImageFormat.Grayscale:
+                    rgba = ColorModelConverter.ConvertGrayscaleToRGBA(image.Data);
+                    break;
+                default:
+                    throw new ArgumentException($"Invalid image format: {image.Format}.");
+            }
+            return CompressSingleImage(dxtType, rgba, image.Width, image.Height);
+        }
+
+        public static byte[] CompressSingleImage(TextureType dxtType, byte[] rgba, int width, int height)
+        {
+            var compressionType = GetCompressionType(dxtType) | SquishFlags.kColourClusterFit;
+            var dest = new byte[Squish.Squish.GetStorageRequirements(width, height, compressionType)];
+            Squish.Squish.CompressImage(rgba, width, height, dest, compressionType);
+            return dest;
+        }
+
+        #endregion
+
+        private static SquishFlags GetCompressionType(TextureType type)
+        {
+            switch (type)
+            {
                 case TextureType.Dxt1:
                     return SquishFlags.kDxt1;
                 case TextureType.Dxt3:
@@ -65,7 +104,7 @@ namespace NexusVault.Format.Tex.Dxt
                 case TextureType.Dxt5:
                     return SquishFlags.kDxt5;
                 default:
-                    throw new ArgumentException($"Invalid texture type: {type}.",nameof(type));
+                    throw new ArgumentException($"Invalid texture type: {type}.", nameof(type));
             }
         }
     }

@@ -16,7 +16,7 @@ using System.Text;
 
 namespace NexusVault.Format.Tex.Jpg
 {
-    public sealed class HuffmanTable
+    internal sealed class HuffmanTable
     {
         private sealed class HuffmanKey : IComparable<HuffmanTable.HuffmanKey>
         {

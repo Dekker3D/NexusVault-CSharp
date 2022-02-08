@@ -20,13 +20,11 @@ namespace NexusVault.Format.Tex
 {
     public static class TextureWriter
     {
-
         public static byte[] ToBinary(TextureType target, Image image, int mipmapCount, int quality, int[] defaultColors)
         {
-            var mipmaps = generateMipMaps(image, mipmapCount);
+            var mipmaps = GenerateMipMaps(image, mipmapCount);
             return ToBinary(target, mipmaps, quality, defaultColors);
         }
-
 
         public static byte[] ToBinary(TextureType target, Image[] mipmaps, int quality, int[] defaultColors)
         {
@@ -73,22 +71,22 @@ namespace NexusVault.Format.Tex
                 case TextureType.Dxt1:
                 case TextureType.Dxt3:
                 case TextureType.Dxt5:
-                    return DXTImageWriter.CompressSingleImage(target, image);
+                    return DXTImage.CompressSingleImage(target, image);
                 case TextureType.Jpg1:
                 case TextureType.Jpg2:
                 case TextureType.Jpg3:
-                    return JPGImageWriter.compressSingleImage(target, image, quality, defaultColors);
+                    return JpgImage.CompressSingleImage(target, image, quality, defaultColors);
                 case TextureType.ARGB1:
                 case TextureType.ARGB2:
                 case TextureType.RGB:
                 case TextureType.Grayscale:
-                    return PlainImageWriter.GetBinary(target, image);
+                    return PlainImage.GetBinary(target, image);
                 default:
                     throw new ArgumentException($"Invalid texture type: {target}.");
             }
         }
 
-        public static Image[] generateMipMaps(Image image, int mipmaps)
+        public static Image[] GenerateMipMaps(Image image, int mipmaps)
         {
             return TextureMipMapGenerator.Generate(image, mipmaps);
         }

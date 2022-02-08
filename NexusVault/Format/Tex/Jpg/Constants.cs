@@ -26,7 +26,7 @@ namespace NexusVault.Format.Tex.Jpg
         Luminance
     }
 
-    public static class Constants
+    internal static class Constants
     {
         // uint8
         private readonly static byte[] HUFF_DC_LUMA_BITS = { 0, 1, 5, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0 };

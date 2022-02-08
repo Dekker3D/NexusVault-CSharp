@@ -28,7 +28,7 @@ namespace NexusVault.Format.Tex.Jpg
                     coefficients[n + k * N] = Math.Cos(Math.PI * (2 * n + 1) * k / CO_SCALE);
         }
 
-        public static void dct(int[] data, int offset, int rowStride)
+        public static void DiscreteCosineTransform(int[] data, int offset, int rowStride)
         {
             var buffer = new int[N * N];
 

@@ -12,10 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Update="Format\Tex\Dxt\DXTImageReader.cs">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Compile>
-    <Compile Update="Format\Tex\Dxt\DXTImageWriter.cs">
+    <Compile Update="Format\Tex\Dxt\DXTImage.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Compile>
     <Compile Update="Format\Tex\Jpg\Constants.cs">
@@ -24,13 +21,10 @@
     <Compile Update="Format\Tex\Jpg\Context.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Compile>
-    <Compile Update="Format\Tex\Jpg\JPGImageReader.cs">
+    <Compile Update="Format\Tex\Jpg\JpgImage.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Compile>
-    <Compile Update="Format\Tex\Plain\PlainImageReader.cs">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Compile>
-    <Compile Update="Format\Tex\Plain\PlainImageWriter.cs">
+    <Compile Update="Format\Tex\Plain\PlainImage.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Compile>
     <Compile Update="Format\Tex\TextureReader.cs">

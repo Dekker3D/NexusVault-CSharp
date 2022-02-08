@@ -74,16 +74,16 @@ namespace NexusVault.Format.Tex
                 case TextureType.Dxt1:
                 case TextureType.Dxt3:
                 case TextureType.Dxt5:
-                    return DXTImageReader.Decompress(this._header, this._data, FileHeader.SizeOf, index);
+                    return DXTImage.Decompress(this._header, this._data, FileHeader.SizeOf, index);
                 case TextureType.Jpg1:
                 case TextureType.Jpg2:
                 case TextureType.Jpg3:
-                    return JPGImageReader.Decompress(this._header, this._data, FileHeader.SizeOf, index);
+                    return JpgImage.Decompress(this._header, this._data, FileHeader.SizeOf, index);
                 case TextureType.ARGB1:
                 case TextureType.ARGB2:
                 case TextureType.RGB:
                 case TextureType.Grayscale:
-                    return PlainImageReader.GetImage(this._header, this._data, FileHeader.SizeOf, index);
+                    return PlainImage.GetImage(this._header, this._data, FileHeader.SizeOf, index);
                 default:
                     throw new TextureException();
             }
