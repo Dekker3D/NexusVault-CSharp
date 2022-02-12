@@ -28,7 +28,7 @@ namespace NexusVault.Format.Tex {
 
         public static Image ReadFirstImage(byte[] data) {
             var texture = Read(data);
-            return texture.getMipMap(0);
+            return texture.GetMipMap(0);
         }
     }
 }

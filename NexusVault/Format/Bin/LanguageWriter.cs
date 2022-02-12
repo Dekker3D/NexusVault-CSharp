@@ -38,16 +38,19 @@ namespace NexusVault.Format.Bin
                 languageType = dictionary.Locale.Type
             };
 
-            header.tagNameLength = writer.WriteNullTerminatedUTF16(dictionary.Locale.TagName);
-            header.tagNameOffset =  writer.BaseStream.Position - postHeaderPosition;            
+            header.tagNameOffset = writer.BaseStream.Position - postHeaderPosition;
+            header.tagNameLength = dictionary.Locale.TagName.Length + 1;
+            writer.WriteNullTerminatedUTF16(dictionary.Locale.TagName);
             writer.AlignTo16Byte();
 
-            header.shortNameLength = writer.WriteNullTerminatedUTF16(dictionary.Locale.ShortName);
-            header.shortNameOffset = writer.BaseStream.Position - postHeaderPosition;            
+            header.shortNameOffset = writer.BaseStream.Position - postHeaderPosition;
+            header.shortNameLength = dictionary.Locale.ShortName.Length + 1;
+            writer.WriteNullTerminatedUTF16(dictionary.Locale.ShortName);            
             writer.AlignTo16Byte();
 
-            header.longNameLength = writer.WriteNullTerminatedUTF16(dictionary.Locale.LongName);
-            header.longNameOffset = writer.BaseStream.Position - postHeaderPosition;            
+            header.longNameOffset = writer.BaseStream.Position - postHeaderPosition;
+            header.longNameLength = dictionary.Locale.LongName.Length + 1;
+            writer.WriteNullTerminatedUTF16(dictionary.Locale.LongName);           
             writer.AlignTo16Byte();
 
             header.entryOffset = writer.BaseStream.Position - postHeaderPosition;
@@ -70,7 +73,8 @@ namespace NexusVault.Format.Bin
 
                     var position = writer.BaseStream.Position;
                     writer.BaseStream.Position = postHeaderPosition + header.textOffset + characterOffset * 2;
-                    characterOffset +=  writer.WriteNullTerminatedUTF16(entry.Value);
+                    characterOffset += entry.Value.Length + 1;
+                    writer.WriteNullTerminatedUTF16(entry.Value);
                     writer.BaseStream.Position = position;
                 }
             }

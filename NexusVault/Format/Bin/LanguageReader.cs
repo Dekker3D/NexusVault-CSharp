@@ -29,24 +29,28 @@ namespace NexusVault.Format.Bin
         {
             var header = new FileHeader(reader);
  
-            if (header.signature != FileHeader.Signature)
-            {
-                throw new SignatureMismatchException("bin", FileHeader.Signature, header.signature);
-            }
+            if (header.signature != FileHeader.Signature)            
+                throw new SignatureMismatchException("bin", FileHeader.Signature, header.signature);            
 
-            if (header.version != 4)
-            {
-                throw new VersionMismatchException("bin", 4, header.version);
-            }
+            if (header.version != 4)            
+                throw new VersionMismatchException("bin", 4, header.version);            
 
             var postHeaderPosition = reader.BaseStream.Position;
 
             reader.BaseStream.Position = postHeaderPosition + (long)header.tagNameOffset;
-            var tagName = reader.ReadUTF16((int)header.tagNameLength - 1);
+            var tagName = reader.ReadNullTerminatedUTF16();
+            if (tagName.Length > header.tagNameLength - 1)
+                throw new InvalidDataException();
+
             reader.BaseStream.Position = postHeaderPosition + (long)header.shortNameOffset;
-            var shortName = reader.ReadUTF16((int)header.shortNameLength - 1);
+            var shortName = reader.ReadNullTerminatedUTF16();
+            if (shortName.Length > header.shortNameLength - 1)
+                throw new InvalidDataException();
+
             reader.BaseStream.Position = postHeaderPosition + (long)header.longNameOffset;
-            var longName = reader.ReadUTF16((int)header.longNameLength - 1);
+            var longName = reader.ReadNullTerminatedUTF16();
+            if (longName.Length > header.longNameLength - 1)
+                throw new InvalidDataException();
 
             var locale = new Locale
             (

@@ -36,6 +36,9 @@
     <Compile Update="Format\Tex\Util\TextureMipMapGenerator.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Compile>
+	<AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+		<_Parameter1>$(AssemblyName).Test</_Parameter1>
+	</AssemblyAttribute>
   </ItemGroup>
 
 </Project>

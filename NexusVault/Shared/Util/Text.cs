@@ -29,10 +29,29 @@ namespace NexusVault.Shared.Util
 
         public static string ReadNullTerminatedUTF16(BinaryReader reader)
         {
+            if (reader.BaseStream.Position == reader.BaseStream.Length)
+                throw new InvalidDataException("No bytes available.");
+
+            var byteBuffer = new byte[2]; // at least 2 byte per character
+            var chrBuffer = new char[8];
             var strBuilder = new StringBuilder(128);
-            char nextChar;
-            while ((nextChar = reader.ReadChar()) > 0 && reader.BaseStream.Position != reader.BaseStream.Length)
-                strBuilder.Append(nextChar);
+            var decoder = Encoding.Unicode.GetDecoder();
+
+            int readBytes;
+            int writtenChars;
+
+            do
+            {
+                readBytes = reader.Read(byteBuffer, 0, byteBuffer.Length);
+                if (byteBuffer[0] == 0 && byteBuffer[1] == 0)
+                    break;
+                writtenChars = decoder.GetChars(byteBuffer, 0, readBytes, chrBuffer, 0, false);
+                strBuilder.Append(chrBuffer, 0, writtenChars);
+            } while (readBytes != 0);
+
+            writtenChars = decoder.GetChars(byteBuffer, 0, 0, chrBuffer, 0, true);
+            strBuilder.Append(chrBuffer, 0, writtenChars);
+
             return strBuilder.ToString();
         }
 
@@ -48,20 +67,28 @@ namespace NexusVault.Shared.Util
 
         public static string ReadNullTerminatedUTF8(BinaryReader reader)
         {
-            var byteBuffer = new byte[1];
+            if (reader.BaseStream.Position == reader.BaseStream.Length)
+                throw new InvalidDataException("No bytes available.");
+
+            var byteBuffer = new byte[1]; // at least 2 byte per character
             var chrBuffer = new char[8];
             var strBuilder = new StringBuilder(128);
             var decoder = Encoding.UTF8.GetDecoder();
 
-            int chars;
-            while ((byteBuffer[0] = reader.ReadByte()) > 0 && reader.BaseStream.Position != reader.BaseStream.Length)
-            {
-                chars = decoder.GetChars(byteBuffer, 0, 1, chrBuffer, 0, false);
-                strBuilder.Append(chrBuffer, 0, chars);
-            }
+            int readBytes;
+            int writtenChars;
 
-            chars = decoder.GetChars(byteBuffer, 0, 0, chrBuffer, 0, true);
-            strBuilder.Append(chrBuffer, 0, chars);
+            do
+            {
+                readBytes = reader.Read(byteBuffer, 0, byteBuffer.Length);
+                if (byteBuffer[0] == 0)
+                    break;
+                writtenChars = decoder.GetChars(byteBuffer, 0, readBytes, chrBuffer, 0, false);
+                strBuilder.Append(chrBuffer, 0, writtenChars);
+            } while (readBytes != 0);
+
+            writtenChars = decoder.GetChars(byteBuffer, 0, 0, chrBuffer, 0, true);
+            strBuilder.Append(chrBuffer, 0, writtenChars);
 
             return strBuilder.ToString();
         }
@@ -77,6 +104,20 @@ namespace NexusVault.Shared.Util
         {
             var written = WriteUTF16(writer, value);
             writer.Write((short)0);
+            return written + 2;
+        }
+
+        public static int WriteUTF8(BinaryWriter writer, string value)
+        {
+            var bytes = Encoding.UTF8.GetBytes(value);
+            writer.Write(bytes);
+            return bytes.Length;
+        }
+
+        public static int WriteNullTerminatedUTF8(BinaryWriter writer, string value)
+        {
+            var written = WriteUTF8(writer, value);
+            writer.Write((byte)0);
             return written + 1;
         }
     }

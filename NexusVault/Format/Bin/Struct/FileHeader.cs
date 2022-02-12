@@ -31,10 +31,19 @@ namespace NexusVault.Format.Bin.Struct
         /// - 4 korean
         /// </summary>
         public long languageType;
+        /// <summary>
+        /// Wide character count, null terminator included
+        /// </summary>
         public long tagNameLength;
         public long tagNameOffset;
+        /// <summary>
+        /// Wide character count, null terminator included
+        /// </summary>
         public long shortNameLength;
         public long shortNameOffset;
+        /// <summary>
+        /// Wide character count, null terminator included
+        /// </summary>
         public long longNameLength;
         public long longNameOffset;
         public long entryCount;

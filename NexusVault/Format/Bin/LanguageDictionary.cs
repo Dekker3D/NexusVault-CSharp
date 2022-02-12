@@ -11,6 +11,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace NexusVault.Format.Bin
 {
@@ -94,7 +95,7 @@ namespace NexusVault.Format.Bin
         {
             return other != null &&
                    EqualityComparer<Locale>.Default.Equals(Locale, other.Locale) &&
-                   EqualityComparer<Dictionary<uint, string>>.Default.Equals(Entries, other.Entries);
+                   Entries.Count == Entries.Count && !Entries.Except(Entries).Any();
         }
 
         public override int GetHashCode()

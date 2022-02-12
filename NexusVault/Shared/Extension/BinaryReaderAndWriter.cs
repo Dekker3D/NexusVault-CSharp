@@ -38,22 +38,22 @@ namespace NexusVault.Shared.Extension
 
         public static void AlignTo16Byte(this BinaryReader reader)
         {
-            reader.BaseStream.Position = NexusVault.Shared.Util.ByteAlignment.AdvanceByToAlign16Byte(reader.BaseStream.Position);
+            reader.BaseStream.Position = NexusVault.Shared.Util.ByteAlignment.AlignTo16Byte(reader.BaseStream.Position);
         }
 
         public static void AlignTo8Byte(this BinaryReader reader)
         {
-            reader.BaseStream.Position = NexusVault.Shared.Util.ByteAlignment.AdvanceByToAlign8Byte(reader.BaseStream.Position);
+            reader.BaseStream.Position = NexusVault.Shared.Util.ByteAlignment.AlignTo16Byte(reader.BaseStream.Position);
         }
 
         public static void AlignTo16Byte(this BinaryWriter writer)
         {
-            writer.BaseStream.Position = NexusVault.Shared.Util.ByteAlignment.AdvanceByToAlign16Byte(writer.BaseStream.Position);
+            writer.BaseStream.Position = NexusVault.Shared.Util.ByteAlignment.AlignTo16Byte(writer.BaseStream.Position);
         }
 
         public static void AlignTo8Byte(this BinaryWriter writer)
         {
-            writer.BaseStream.Position = NexusVault.Shared.Util.ByteAlignment.AdvanceByToAlign8Byte(writer.BaseStream.Position);
+            writer.BaseStream.Position = NexusVault.Shared.Util.ByteAlignment.AlignTo16Byte(writer.BaseStream.Position);
         }
 
         public static string ReadUTF16(this BinaryReader reader, int chars)
