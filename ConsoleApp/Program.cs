@@ -8,9 +8,7 @@ namespace ConsoleApp
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
-          var zigzag =   Nexusvault.Tex.ZigZag.CalculateRowFirstZigZagIndices(8, 8);
-            Debug.WriteLine($"[{string.Join(", ", zigzag)}]");
+
 
         }
     }
