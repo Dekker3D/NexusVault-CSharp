@@ -6,7 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Nexusvault.Tex\NexusVault.csproj" />
+    <ProjectReference Include="..\NexusVault\NexusVault.csproj" />
   </ItemGroup>
 
 </Project>
