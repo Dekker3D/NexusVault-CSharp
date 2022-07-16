@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 namespace NexusVault.Format.M3.Struct
 {
     [StructLayout(LayoutKind.Sequential, Size = 0x70, Pack = 1)]
-    public sealed class M3Mesh
+    public sealed class M3StructMesh
     {
         public uint indexStart;
         public uint vertexStart;

@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 namespace NexusVault.Format.M3.Struct
 {
     [StructLayout(LayoutKind.Sequential, Size = 0x160, Pack = 1)]
-    public sealed class M3Bone
+    public sealed class M3StructBone
     {
         public uint gap_000;
         public short parentBone;
